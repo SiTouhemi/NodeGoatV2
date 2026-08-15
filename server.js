@@ -1,5 +1,7 @@
 "use strict";
 
+require("dotenv").config();
+
 const express = require("express");
 const favicon = require("serve-favicon");
 const bodyParser = require("body-parser");
@@ -12,7 +14,6 @@ const MongoClient = require("mongodb").MongoClient; // Driver for connecting to 
 const http = require("http");
 const marked = require("marked");
 //const nosniff = require('dont-sniff-mimetype');
-const app = express(); // Web framework to handle routing requests
 const routes = require("./app/routes");
 const { port, db, cookieSecret } = require("./config/config"); // Application config properties
 const { startMongoMemoryIfNeeded } = require("./lib/mongo-bootstrap");
@@ -28,150 +29,175 @@ const httpsOptions = {
 };
 */
 
-(async () => {
+const createApp = async () => {
+    const app = express();
     let mongoServer = null;
 
     try {
         const bootstrap = await startMongoMemoryIfNeeded({ uri: db });
         mongoServer = bootstrap.server;
 
-        MongoClient.connect(bootstrap.uri, (err, mongoDb) => {
-            if (err) {
-                console.log("Error: DB: connect");
-                console.log(err);
-                process.exit(1);
+        const mongoDb = await new Promise((resolve, reject) => {
+            MongoClient.connect(bootstrap.uri, (err, client) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(client);
+            });
+        });
+
+        console.log("Connected to the database");
+
+        process.on("SIGINT", async () => {
+            if (mongoServer) {
+                await mongoServer.stop();
             }
-            console.log("Connected to the database");
+            process.exit(0);
+        });
 
-            process.on("SIGINT", async () => {
-                if (mongoServer) {
-                    await mongoServer.stop();
-                }
-                process.exit(0);
+        app.get("/health", (req, res) => {
+            res.json({
+                status: "ok",
+                environment: process.env.NODE_ENV || "development",
+                port,
+                database: bootstrap.uri
             });
+        });
 
+        /*
+        // Fix for A5 - Security MisConfig
+        // TODO: Review the rest of helmet options, like "xssFilter"
+        // Remove default x-powered-by response header
+        app.disable("x-powered-by");
+
+        // Prevent opening page in frame or iframe to protect from clickjacking
+        app.use(helmet.frameguard()); //xframe deprecated
+
+        // Prevents browser from caching and storing page
+        app.use(helmet.noCache());
+
+        // Allow loading resources only from white-listed domains
+        app.use(helmet.contentSecurityPolicy()); //csp deprecated
+
+        // Allow communication only on HTTPS
+        app.use(helmet.hsts());
+
+        // TODO: Add another vuln: https://github.com/helmetjs/helmet/issues/26
+        // Enable XSS filter in IE (On by default)
+        // app.use(helmet.iexss());
+        // Now it should be used in hit way, but the README alerts that could be
+        // dangerous, like specified in the issue.
+        // app.use(helmet.xssFilter({ setOnOldIE: true }));
+
+        // Forces browser to only use the Content-Type set in the response header instead of sniffing or guessing it
+        app.use(nosniff());
+        */
+
+        // Adding/ remove HTTP Headers for security
+        app.use(favicon(__dirname + "/app/assets/favicon.ico"));
+
+        // Express middleware to populate "req.body" so we can access POST variables
+        app.use(bodyParser.json());
+        app.use(bodyParser.urlencoded({
+            // Mandatory in Express v4
+            extended: false
+        }));
+
+        // Enable session management using express middleware
+        app.use(session({
+            // genid: (req) => {
+            //    return genuuid() // use UUIDs for session IDs
+            //},
+            secret: cookieSecret,
+            // Both mandatory in Express v4
+            saveUninitialized: true,
+            resave: true
             /*
             // Fix for A5 - Security MisConfig
-            // TODO: Review the rest of helmet options, like "xssFilter"
-            // Remove default x-powered-by response header
-            app.disable("x-powered-by");
-
-            // Prevent opening page in frame or iframe to protect from clickjacking
-            app.use(helmet.frameguard()); //xframe deprecated
-
-            // Prevents browser from caching and storing page
-            app.use(helmet.noCache());
-
-            // Allow loading resources only from white-listed domains
-            app.use(helmet.contentSecurityPolicy()); //csp deprecated
-
-            // Allow communication only on HTTPS
-            app.use(helmet.hsts());
-
-            // TODO: Add another vuln: https://github.com/helmetjs/helmet/issues/26
-            // Enable XSS filter in IE (On by default)
-            // app.use(helmet.iexss());
-            // Now it should be used in hit way, but the README alerts that could be
-            // dangerous, like specified in the issue.
-            // app.use(helmet.xssFilter({ setOnOldIE: true }));
-
-            // Forces browser to only use the Content-Type set in the response header instead of sniffing or guessing it
-            app.use(nosniff());
+            // Use generic cookie name
+            key: "sessionId",
             */
 
-            // Adding/ remove HTTP Headers for security
-            app.use(favicon(__dirname + "/app/assets/favicon.ico"));
-
-            // Express middleware to populate "req.body" so we can access POST variables
-            app.use(bodyParser.json());
-            app.use(bodyParser.urlencoded({
-                // Mandatory in Express v4
-                extended: false
-            }));
-
-            // Enable session management using express middleware
-            app.use(session({
-                // genid: (req) => {
-                //    return genuuid() // use UUIDs for session IDs
-                //},
-                secret: cookieSecret,
-                // Both mandatory in Express v4
-                saveUninitialized: true,
-                resave: true
-                /*
-                // Fix for A5 - Security MisConfig
-                // Use generic cookie name
-                key: "sessionId",
-                */
-
-                /*
-                // Fix for A3 - XSS
-                // TODO: Add "maxAge"
-                cookie: {
-                    httpOnly: true
-                    // Remember to start an HTTPS server to get this working
-                    // secure: true
-                }
-                */
-
-            }));
-
             /*
-            // Fix for A8 - CSRF
-            // Enable Express csrf protection
-            app.use(csrf());
-            // Make csrf token available in templates
-            app.use((req, res, next) => {
-                res.locals.csrftoken = req.csrfToken();
-                next();
-            });
+            // Fix for A3 - XSS
+            // TODO: Add "maxAge"
+            cookie: {
+                httpOnly: true
+                // Remember to start an HTTPS server to get this working
+                // secure: true
+            }
             */
 
-            // Register templating engine
-            app.engine(".html", consolidate.swig);
-            app.set("view engine", "html");
-            app.set("views", `${__dirname}/app/views`);
-            // Fix for A5 - Security MisConfig
-            // TODO: make sure assets are declared before app.use(session())
-            app.use(express.static(`${__dirname}/app/assets`));
+        }));
 
-            // Initializing marked library
-            // Fix for A9 - Insecure Dependencies
-            marked.setOptions({
-                sanitize: true
-            });
-            app.locals.marked = marked;
+        /*
+        // Fix for A8 - CSRF
+        // Enable Express csrf protection
+        app.use(csrf());
+        // Make csrf token available in templates
+        app.use((req, res, next) => {
+            res.locals.csrftoken = req.csrfToken();
+            next();
+        });
+        */
 
-            // Application routes
-            routes(app, mongoDb);
+        // Register templating engine
+        app.engine(".html", consolidate.swig);
+        app.set("view engine", "html");
+        app.set("views", `${__dirname}/app/views`);
+        // Fix for A5 - Security MisConfig
+        // TODO: make sure assets are declared before app.use(session())
+        app.use(express.static(`${__dirname}/app/assets`));
 
-            // Template system setup
-            swig.setDefaults({
-                // Autoescape disabled
-                autoescape: false
-                /*
-                // Fix for A3 - XSS, enable auto escaping
-                autoescape: true // default value
-                */
-            });
+        // Initializing marked library
+        // Fix for A9 - Insecure Dependencies
+        marked.setOptions({
+            sanitize: true
+        });
+        app.locals.marked = marked;
 
-            // Insecure HTTP connection
-            http.createServer(app).listen(port, () => {
-                console.log(`Express http server listening on port ${port}`);
-            });
+        // Application routes
+        routes(app, mongoDb);
 
+        // Template system setup
+        swig.setDefaults({
+            // Autoescape disabled
+            autoescape: false
             /*
-            // Fix for A6-Sensitive Data Exposure
-            // Use secure HTTPS protocol
-            https.createServer(httpsOptions, app).listen(port, () => {
-                console.log(`Express http server listening on port ${port}`);
-            });
+            // Fix for A3 - XSS, enable auto escaping
+            autoescape: true // default value
             */
         });
+
+        return app;
     } catch (error) {
         console.log("Error: DB: bootstrap");
         console.log(error);
+        throw error;
+    }
+};
+
+const startServer = async () => {
+    try {
+        const app = await createApp();
+        const server = http.createServer(app);
+        server.listen(port, () => {
+            console.log(`Express http server listening on port ${port}`);
+        });
+        return server;
+    } catch (error) {
+        console.error(error);
         process.exit(1);
     }
-})();
+};
+
+if (require.main === module) {
+    startServer();
+}
+
+module.exports = {
+    createApp,
+    startServer
+};
 
