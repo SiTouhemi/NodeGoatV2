@@ -93,7 +93,13 @@
                             <br />
                         </div>
                         <div class="panel-body">
-
+                            <div class="alert alert-info" style="margin-bottom: 20px;">
+                                <strong>Demo accounts</strong>
+                                <p style="margin-top: 8px; margin-bottom: 0;">
+                                    Admin: <code>admin</code> / <code>Admin_123</code><br>
+                                    User: <code>user1</code> / <code>User1_123</code>
+                                </p>
+                            </div>
 
                             {% if loginError %}
                             <div class="alert alert-dismissable alert-danger">
@@ -101,8 +107,6 @@
                                 {{loginError}}
                             </div>
                             {% endif %}
-
-
 
                             <form method="post" role="form" method="post" id="loginform">
                                 <div class="form-group">

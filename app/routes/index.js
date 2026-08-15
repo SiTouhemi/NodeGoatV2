@@ -38,6 +38,23 @@ const index = (app, db) => {
 
     app.get("/overview", isLoggedIn, sessionHandler.displayWelcomePage);
 
+    app.get("/demo-login/:role", (req, res, next) => {
+        const role = (req.params.role || "").toLowerCase();
+        const demoCredentials = {
+            admin: { userName: "admin", password: "Admin_123" },
+            user: { userName: "user1", password: "User1_123" }
+        };
+
+        const selected = demoCredentials[role] || demoCredentials.admin;
+
+        req.body = {
+            userName: selected.userName,
+            password: selected.password
+        };
+
+        return sessionHandler.handleLoginRequest(req, res, next);
+    });
+
     app.get("/challenges", isLoggedIn, (req, res) => {
         const challenges = [
             {
