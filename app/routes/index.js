@@ -74,6 +74,22 @@ const index = (app, db) => {
         });
     });
 
+    app.get("/roadmap", isLoggedIn, (req, res) => {
+        const roadmap = [
+            { phase: "Phase 1", title: "Foundations", summary: "Learn the attack surface and authentication model.", completion: "Completed" },
+            { phase: "Phase 2", title: "Injection and Validation", summary: "Study input validation issues and unsafe command execution.", completion: "In progress" },
+            { phase: "Phase 3", title: "Access and Session Risks", summary: "Map broken auth, authorization gaps, and session weaknesses.", completion: "Next" },
+            { phase: "Phase 4", title: "Secure Engineering", summary: "Apply fixes and verify the application behaves safely.", completion: "Planned" }
+        ];
+
+        return res.render("roadmap", {
+            roadmap,
+            environmentalScripts,
+            firstName: req.session.firstName || "User",
+            lastName: req.session.lastName || ""
+        });
+    });
+
     // Login form
     app.get("/login", sessionHandler.displayLoginPage);
     app.post("/login", sessionHandler.handleLoginRequest);
