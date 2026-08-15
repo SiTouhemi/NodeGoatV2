@@ -26,8 +26,17 @@ const index = (app, db) => {
     //Middleware to check if user has admin rights
     const isAdmin = sessionHandler.isAdminUserMiddleware;
 
-    // The main page of the app
-    app.get("/", sessionHandler.displayWelcomePage);
+    // Public landing page for a more polished product experience
+    app.get("/", (req, res) => {
+        if (req.session && req.session.userId) {
+            return res.redirect("/dashboard");
+        }
+        return res.render("landing", {
+            environmentalScripts
+        });
+    });
+
+    app.get("/overview", isLoggedIn, sessionHandler.displayWelcomePage);
 
     // Login form
     app.get("/login", sessionHandler.displayLoginPage);
