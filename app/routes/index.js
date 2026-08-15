@@ -38,6 +38,42 @@ const index = (app, db) => {
 
     app.get("/overview", isLoggedIn, sessionHandler.displayWelcomePage);
 
+    app.get("/challenges", isLoggedIn, (req, res) => {
+        const challenges = [
+            {
+                name: "Broken Access Control",
+                difficulty: "Easy",
+                status: "Available",
+                description: "Explore how authorization checks can be bypassed in a financial dashboard."
+            },
+            {
+                name: "Command Injection",
+                difficulty: "Medium",
+                status: "Available",
+                description: "Practice how unsafe command execution can expose system-level risks."
+            },
+            {
+                name: "XSS",
+                difficulty: "Medium",
+                status: "Available",
+                description: "Examine how unsafe rendering can lead to script injection in user-driven content."
+            },
+            {
+                name: "SSRF",
+                difficulty: "Hard",
+                status: "Available",
+                description: "Review how untrusted URLs can be abused for internal service access."
+            }
+        ];
+
+        return res.render("challenges", {
+            challenges,
+            environmentalScripts,
+            firstName: req.session.firstName || "User",
+            lastName: req.session.lastName || ""
+        });
+    });
+
     // Login form
     app.get("/login", sessionHandler.displayLoginPage);
     app.post("/login", sessionHandler.handleLoginRequest);
