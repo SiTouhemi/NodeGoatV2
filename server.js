@@ -37,17 +37,65 @@ const createApp = async () => {
         const bootstrap = await startMongoMemoryIfNeeded({ uri: db });
         mongoServer = bootstrap.server;
 
-        const mongoDb = await new Promise((resolve, reject) => {
-            MongoClient.connect(bootstrap.uri, (err, client) => {
-                if (err) {
-                    reject(err);
-                    return;
+        const mongoClient = await MongoClient.connect(bootstrap.uri);
+        const mongoDb = mongoClient.db();
+
+        const seedDemoData = async () => {
+            const usersCol = mongoDb.collection("users");
+            const userCount = await usersCol.countDocuments({});
+
+            if (userCount > 0) {
+                return;
+            }
+
+            const demoUsers = [
+                {
+                    _id: 1,
+                    userName: "admin",
+                    firstName: "Node Goat",
+                    lastName: "Admin",
+                    password: "Admin_123",
+                    isAdmin: true
+                },
+                {
+                    _id: 2,
+                    userName: "user1",
+                    firstName: "John",
+                    lastName: "Doe",
+                    benefitStartDate: "2030-01-10",
+                    password: "User1_123"
+                },
+                {
+                    _id: 3,
+                    userName: "user2",
+                    firstName: "Will",
+                    lastName: "Smith",
+                    benefitStartDate: "2025-11-30",
+                    password: "User2_123"
                 }
-                resolve(client);
-            });
-        });
+            ];
+
+            const demoAllocations = [
+                { userId: 1, stocks: 34, funds: 21, bonds: 45 },
+                { userId: 2, stocks: 28, funds: 32, bonds: 40 },
+                { userId: 3, stocks: 18, funds: 24, bonds: 58 }
+            ];
+
+            await mongoDb.collection("counters").insertOne({ _id: "userId", seq: 3 });
+            await usersCol.insertMany(demoUsers);
+            await mongoDb.collection("allocations").insertMany(demoAllocations);
+        };
+
+        await seedDemoData();
 
         console.log("Connected to the database");
+
+        app.locals.runtimeInfo = {
+            environment: process.env.NODE_ENV || "development",
+            port,
+            database: bootstrap.uri,
+            isMemoryFallback: Boolean(mongoServer)
+        };
 
         process.on("SIGINT", async () => {
             if (mongoServer) {
@@ -59,9 +107,10 @@ const createApp = async () => {
         app.get("/health", (req, res) => {
             res.json({
                 status: "ok",
-                environment: process.env.NODE_ENV || "development",
-                port,
-                database: bootstrap.uri
+                environment: app.locals.runtimeInfo.environment,
+                port: app.locals.runtimeInfo.port,
+                database: app.locals.runtimeInfo.database,
+                isMemoryFallback: app.locals.runtimeInfo.isMemoryFallback
             });
         });
 

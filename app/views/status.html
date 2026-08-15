@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RetireEasy runtime status">
+    <title>RetireEasy | System Status</title>
+    <link href="/vendor/bootstrap/bootstrap.css" rel="stylesheet">
+    <link href="/vendor/theme/sb-admin.css" rel="stylesheet">
+    <link rel="stylesheet" href="/vendor/theme/font-awesome/css/font-awesome.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #081120 0%, #0f172a 45%, #111827 100%);
+            color: #e5e7eb;
+        }
+        .status-shell {
+            min-height: 100vh;
+            padding: 48px 18px;
+            display: flex;
+            align-items: center;
+        }
+        .status-card {
+            max-width: 980px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 20px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+            padding: 36px;
+        }
+        .status-chip {
+            display: inline-block;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(34, 197, 94, 0.14);
+            color: #86efac;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-top: 28px;
+        }
+        .status-tile {
+            background: rgba(30, 41, 59, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 14px;
+            padding: 18px;
+        }
+        .status-tile h4 {
+            margin-top: 0;
+            color: #f8fafc;
+        }
+        .muted {
+            color: #cbd5e1;
+        }
+        code {
+            background: rgba(15, 23, 42, 0.8);
+            color: #93c5fd;
+        }
+        .btn-primary {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        .btn-secondary {
+            background: transparent;
+            border-color: rgba(148, 163, 184, 0.45);
+            color: #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-shell">
+        <div class="status-card">
+            <div class="status-chip">Runtime status</div>
+            <h1 style="margin-top: 16px; margin-bottom: 12px;">RetireEasy is running</h1>
+            <p class="muted" style="font-size: 18px; max-width: 760px;">
+                This page is meant for quick checks during local development and demos. It shows the current runtime mode, the active port, and the database connection path.
+            </p>
+
+            <div class="status-grid">
+                <div class="status-tile">
+                    <h4><i class="fa fa-plug"></i> Environment</h4>
+                    <p class="muted">{{ runtimeInfo.environment }}</p>
+                </div>
+                <div class="status-tile">
+                    <h4><i class="fa fa-server"></i> Port</h4>
+                    <p class="muted">{{ runtimeInfo.port }}</p>
+                </div>
+                <div class="status-tile">
+                    <h4><i class="fa fa-database"></i> Database</h4>
+                    <p class="muted" style="word-break: break-all;">{{ runtimeInfo.database }}</p>
+                </div>
+                <div class="status-tile">
+                    <h4><i class="fa fa-refresh"></i> Fallback mode</h4>
+                    <p class="muted">{% if runtimeInfo.isMemoryFallback %}In-memory MongoDB fallback is active{% else %}Connected to the configured MongoDB server{% endif %}</p>
+                </div>
+            </div>
+
+            <div class="status-grid" style="margin-top: 24px;">
+                <div class="status-tile">
+                    <h4><i class="fa fa-play-circle"></i> Quick actions</h4>
+                    <p class="muted" style="margin-bottom: 10px;">Use these links to move faster during demos or local validation.</p>
+                    <p style="margin-bottom: 0;">
+                        <a class="btn btn-primary" href="/login">Login</a>
+                        <a class="btn btn-secondary" href="/tutorial" target="_blank">Tutorial</a>
+                        <a class="btn btn-secondary" href="/health">Health</a>
+                    </p>
+                </div>
+                <div class="status-tile">
+                    <h4><i class="fa fa-lightbulb-o"></i> Demo accounts</h4>
+                    <p class="muted" style="margin-bottom: 0;">
+                        Admin: <code>admin</code> / <code>Admin_123</code><br>
+                        User: <code>user1</code> / <code>User1_123</code>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

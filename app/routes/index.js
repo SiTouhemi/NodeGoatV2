@@ -7,6 +7,7 @@ const MemosHandler = require("./memos");
 const ResearchHandler = require("./research");
 const tutorialRouter = require("./tutorial");
 const ErrorHandler = require("./error").errorHandler;
+const { environmentalScripts } = require("../../config/config");
 
 const index = (app, db) => {
 
@@ -38,21 +39,36 @@ const index = (app, db) => {
 
     app.get("/overview", isLoggedIn, sessionHandler.displayWelcomePage);
 
-    app.get("/demo-login/:role", (req, res, next) => {
-        const role = (req.params.role || "").toLowerCase();
-        const demoCredentials = {
-            admin: { userName: "admin", password: "Admin_123" },
-            user: { userName: "user1", password: "User1_123" }
-        };
+    app.get("/status", (req, res) => {
+        const runtimeInfo = app.locals.runtimeInfo || {};
 
-        const selected = demoCredentials[role] || demoCredentials.admin;
+        return res.render("status", {
+            runtimeInfo,
+            environmentalScripts,
+            isLoggedIn: Boolean(req.session && req.session.userId)
+        });
+    });
 
-        req.body = {
-            userName: selected.userName,
-            password: selected.password
-        };
+    app.get("/demo-login/:role", async (req, res, next) => {
+        try {
+            const role = (req.params.role || "").toLowerCase();
+            const demoUsers = {
+                admin: "admin",
+                user: "user1"
+            };
 
-        return sessionHandler.handleLoginRequest(req, res, next);
+            const userName = demoUsers[role] || demoUsers.admin;
+            const user = await db.collection("users").findOne({ userName });
+
+            if (!user) {
+                return res.redirect("/login");
+            }
+
+            req.session.userId = user._id;
+            return res.redirect(user.isAdmin ? "/benefits" : "/dashboard");
+        } catch (error) {
+            return next(error);
+        }
     });
 
     app.get("/challenges", isLoggedIn, (req, res) => {
